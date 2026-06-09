@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mission to Mars – Copilot Agent Quiz</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f6f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    #quiz-wrap {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      padding: 2rem 2rem 2.5rem;
+      width: 100%;
+      max-width: 620px;
+    }
+
+    /* Header */
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.75rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid #eef0f3;
+    }
+    .quiz-header-icon { font-size: 24px; }
+    .quiz-header-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a3c6b;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .quiz-header-sub {
+      font-size: 12px;
+      color: #8a93a2;
+      margin-top: 1px;
+    }
+
+    /* Progress */
+    .progress-bar-track {
+      height: 5px;
+      background: #eef0f3;
+      border-radius: 3px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #1a3c6b, #2e6fce);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .step-label {
+      font-size: 12px;
+      color: #8a93a2;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .question-text {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.45;
+      margin-bottom: 0.5rem;
+    }
+    .question-sub {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 1.5rem;
+      line-height: 1.55;
+    }
+
+    /* Options */
+    .options { display: flex; flex-direction: column; gap: 10px; }
+
+    .option-btn {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      width: 100%;
+      font-family: inherit;
+    }
+    .option-btn:hover {
+      border-color: #2e6fce;
+      background: #f0f6ff;
+      box-shadow: 0 0 0 3px rgba(46,111,206,0.08);
+    }
+    .option-btn.selected {
+      border-color: #1a3c6b;
+      border-width: 2px;
+      background: #eef4ff;
+      box-shadow: 0 0 0 3px rgba(26,60,107,0.1);
+    }
+    .option-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+    .option-label { font-size: 14px; font-weight: 600; color: #111827; line-height: 1.4; }
+    .option-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
+
+    /* Nav */
+    .nav-row { display: flex; justify-content: flex-end; margin-top: 1.75rem; }
+
+    .btn-next {
+      padding: 11px 28px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #1a3c6b, #2e6fce);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(26,60,107,0.25);
+    }
+    .btn-next:disabled { opacity: 0.3; cursor: default; box-shadow: none; }
+    .btn-next:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-next:not(:disabled):active { transform: translateY(0); }
+
+    /* Result */
+    #result-view { display: none; }
+
+    .result-hero {
+      text-align: center;
+      padding: 1.5rem 1rem 1.25rem;
+      background: linear-gradient(135deg, #eef4ff 0%, #f8f0ff 100%);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .result-rocket { font-size: 52px; display: block; margin-bottom: 0.75rem; }
+    .result-headline { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 0.25rem; }
+    .result-sub { font-size: 13px; color: #6b7280; }
+
+    .result-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+    .result-card {
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+    .result-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #8a93a2;
+      margin-bottom: 6px;
+    }
+    .result-card-value { font-size: 14px; font-weight: 700; color: #111827; line-height: 1.4; }
+    .result-card-detail { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+    .phases-label { font-size: 12px; color: #6b7280; margin-bottom: 8px; font-weight: 500; }
+    .phase-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.25rem; }
+    .phase-pill {
+      font-size: 12px;
+      padding: 5px 13px;
+      border-radius: 99px;
+      border: 1px solid #d1d5db;
+      color: #6b7280;
+      background: #fff;
+      font-weight: 500;
+    }
+    .phase-pill.start {
+      background: #1a3c6b;
+      color: #fff;
+      border-color: #1a3c6b;
+      font-weight: 600;
+    }
+
+    .result-desc {
+      font-size: 13.5px;
+      color: #374151;
+      line-height: 1.65;
+      padding: 1rem 1.25rem;
+      background: #f8f9fb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    .btn-restart {
+      width: 100%;
+      padding: 11px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      background: transparent;
+      font-size: 13px;
+      color: #6b7280;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-restart:hover { background: #f3f4f6; border-color: #9ca3af; }
+
+    @media (max-width: 480px) {
+      #quiz-wrap { padding: 1.25rem 1rem 1.75rem; }
+      .result-cards { grid-template-columns: 1fr; }
+      .question-text { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div id="quiz-wrap">
+
+  <div class="quiz-header">
+    <span class="quiz-header-icon">🚀</span>
+    <div>
+      <div class="quiz-header-title">Mission to Mars</div>
+      <div class="quiz-header-sub">Finde deinen Einstieg in Copilot Agents & Copilot Studio</div>
+    </div>
+  </div>
+
+  <!-- Quiz view -->
+  <div id="quiz-view">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="prog" style="width: 0%"></div>
+    </div>
+    <div class="step-label" id="step-lbl">Frage 1 von 5</div>
+    <div class="question-text" id="q-text"></div>
+    <div class="question-sub" id="q-sub"></div>
+    <div class="options" id="opts"></div>
+    <div class="nav-row">
+      <button class="btn-next" id="btn-next" disabled onclick="nextStep()">Weiter →</button>
+    </div>
+  </div>
+
+  <!-- Result view -->
+  <div id="result-view">
+    <div class="result-hero">
+      <span class="result-rocket" id="res-icon">🚀</span>
+      <div class="result-headline" id="res-headline"></div>
+      <div class="result-sub" id="res-sub"></div>
+    </div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="result-card-label">Empfohlene Phase</div>
+        <div class="result-card-value" id="res-phase"></div>
+        <div class="result-card-detail" id="res-phase-detail"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">Deine Zielgruppe</div>
+        <div class="result-card-value" id="res-role"></div>
+        <div class="result-card-detail" id="res-role-detail"></div>
+      </div>
+    </div>
+    <div class="phases-label">Dein empfohlener Einstieg und mögliche Weiterentwicklung:</div>
+    <div class="phase-pills" id="res-pills"></div>
+    <div class="result-desc" id="res-desc"></div>
+    <button class="btn-restart" onclick="restart()">↺ Quiz nochmal starten</button>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    text: "Hast du schon einmal Copilot Studio geöffnet?",
+    sub: "Copilot Studio ist das Microsoft-Tool, mit dem du Copilot Agents erstellen kannst — direkt im Browser, ohne Code.",
+    options: [
+      { icon: "🆕", label: "Nein, noch nie gehört",       desc: "Copilot Studio ist mir komplett neu", val: 0 },
+      { icon: "👀", label: "Ich habe reingeschaut",        desc: "Ich hab's geöffnet, aber noch nichts gebaut", val: 1 },
+      { icon: "🤖", label: "Ich habe einen Agent erstellt",desc: "Ich habe mindestens einen Agenten in Copilot Studio gebaut", val: 2 },
+      { icon: "🛠️", label: "Ich nutze es regelmäßig",     desc: "Ich baue und betreibe Agents aktiv in Copilot Studio", val: 3 },
+    ]
+  },
+  {
+    text: "Was beschreibt deine Rolle im Kontext von Copilot Agents am besten?",
+    sub: "Denk daran, wie du mit Agenten in Berührung kommst oder kommen möchtest.",
+    options: [
+      { icon: "👤", label: "Ich nutze Agents",            desc: "Ich interagiere mit Agenten, die andere gebaut haben", val: "user" },
+      { icon: "🏢", label: "Ich verantworte Agents",      desc: "Ich bin für Freigabe, Betrieb oder Governance von Agenten zuständig", val: "owner" },
+      { icon: "🧩", label: "Ich baue Agents (No-Code)",   desc: "Ich erstelle Agenten selbst, ohne Programmierkenntnisse", val: "citizen" },
+      { icon: "⚙️", label: "Ich entwickle Agents technisch", desc: "Ich nutze Power Platform, APIs, Flows oder Dataverse für Agents", val: "maker" },
+    ]
+  },
+  {
+    text: "Was willst du mit Copilot Agents primär erreichen?",
+    sub: "",
+    options: [
+      { icon: "🧭", label: "Verstehen, was Agents sind",       desc: "Ich will wissen, wie Copilot Agents funktionieren und was das für mich bedeutet", val: "understand" },
+      { icon: "🤖", label: "Meinen ersten Agenten bauen",      desc: "Ich will einen einfachen, nützlichen Agenten selbst erstellen", val: "firstagent" },
+      { icon: "📚", label: "Agenten mit Wissen verbinden",     desc: "Ich will Agents an SharePoint, M365-Daten oder eigene Inhalte anbinden", val: "knowledge" },
+      { icon: "🔁", label: "Geschäftsprozesse automatisieren", desc: "Ich will echte Workflows mit Agenten und Power Automate umsetzen", val: "automate" },
+    ]
+  },
+  {
+    text: "Welche Aussage beschreibt dich am ehesten?",
+    sub: "Sei ehrlich — das hilft uns, die passende Session für dich zu finden.",
+    options: [
+      { icon: "🌱", label: "Ich kenne mich mit Power Platform kaum aus", desc: "Power Automate, Dataverse, Connectors — das ist noch Neuland", val: 0 },
+      { icon: "📋", label: "Ich kenne SharePoint und M365 gut",           desc: "Ich arbeite regelmäßig mit Teams, SharePoint oder OneDrive", val: 1 },
+      { icon: "🔌", label: "Ich habe schon Flows oder Topics gebaut",     desc: "Power Automate oder Copilot Studio Topics kenne ich bereits", val: 2 },
+      { icon: "🧪", label: "Ich arbeite mit APIs oder Dataverse",         desc: "Ich baue Integrationen, Custom Connectors oder Datenbankverbindungen", val: 3 },
+    ]
+  },
+  {
+    text: "Was ist für dich beim Thema Copilot Agents aktuell die größte Hürde?",
+    sub: "Das hilft uns zu verstehen, worauf wir in deiner Session den Fokus legen sollten.",
+    options: [
+      { icon: "🔒", label: "Governance & Sicherheit",          desc: "Ich bin unsicher, was erlaubt ist, wer verantwortlich ist und wie das sicher läuft", val: "governance" },
+      { icon: "🤔", label: "Ich weiß nicht, wo ich anfangen soll", desc: "Die Möglichkeiten sind groß — mir fehlt der klare Einstiegspunkt", val: "start" },
+      { icon: "📉", label: "Agents liefern ungenaue Antworten", desc: "Ich will verstehen, wie ich Agenten zuverlässiger und halluzinationsfreier mache", val: "reliability" },
+      { icon: "⚡", label: "Skalierung & Automatisierung",      desc: "Ein einzelner Agent reicht mir nicht — ich will komplexere Systeme bauen", val: "scale" },
+    ]
+  }
+];
+
+let current = 0, answers = [], selected = null;
+const TOTAL = questions.length;
+
+function render() {
+  const q = questions[current];
+  document.getElementById('prog').style.width = (current / TOTAL * 100) + '%';
+  document.getElementById('step-lbl').textContent = `Frage ${current + 1} von ${TOTAL}`;
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-sub').textContent = q.sub;
+  selected = null;
+  document.getElementById('btn-next').disabled = true;
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-icon">${opt.icon}</span><div><div class="option-label">${opt.label}</div><div class="option-desc">${opt.desc}</div></div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selected = opt.val;
+      document.getElementById('btn-next').disabled = false;
+    };
+    opts.appendChild(btn);
+  });
+}
+
+function nextStep() {
+  if (selected === null) return;
+  answers.push(selected);
+  current++;
+  if (current >= TOTAL) showResult();
+  else render();
+}
+
+function showResult() {
+  document.getElementById('prog').style.width = '100%';
+  document.getElementById('quiz-view').style.display = 'none';
+  document.getElementById('result-view').style.display = 'block';
+
+  const [studioExp, role, goal, tools, hurdle] = answers;
+
+  const roleMap = {
+    user:    { label: "Agent User",        detail: "Du nutzt Agents im Alltag",               icon: "👤" },
+    owner:   { label: "Agent Owner",       detail: "Du verantwortest Agents in deiner Org",    icon: "🏢" },
+    citizen: { label: "Citizen Developer", detail: "Du baust Agents mit No-Code / Low-Code",   icon: "🧩" },
+    maker:   { label: "Maker",             detail: "Du entwickelst Agents technisch",           icon: "⚙️" },
+  };
+  const roleInfo = roleMap[role] || roleMap['user'];
+
+  let phase, phaseDetail, phaseIcon, desc, pills;
+
+  if (role === 'owner' || hurdle === 'governance' || (role === 'user' && goal === 'understand')) {
+    phase = "Phase 01 – Moon Base"; phaseDetail = "60–90 min · Info Session"; phaseIcon = "🌙";
+    desc = "Phase 01 ist dein richtiger Start: Du lernst, was Copilot Agents sind, wer die Verantwortung trägt, was Governance bei LHG bedeutet — und wie Lizenzen und Kosten funktionieren. Danach hast du ein klares Mindset und weißt, was Agents für dich bedeuten.";
+    pills = [{ label: "Phase 01 – Moon Base", start: true }, { label: "Phase 02 – Low Orbit" }];
+
+  } else if (studioExp <= 1 && (goal === 'firstagent' || hurdle === 'start') && role === 'citizen') {
+    phase = "Phase 02 – Low Orbit"; phaseDetail = "60–90 min · Hands-on Agent Builder"; phaseIcon = "🚀";
+    desc = "Du bist bereit für deinen ersten eigenen Agenten in Copilot Studio! Phase 02 zeigt dir No-Code Agent Builder Grundlagen, wie du Retrieval Agents für FAQ und Wissensmanagement baust, und was in Copilot Studio möglich ist — direkt ausprobieren, kein Code nötig.";
+    pills = [{ label: "Phase 01 – Moon Base" }, { label: "Phase 02 – Low Orbit", start: true }, { label: "Phase 03 – Deep Space" }];
+
+  } else if (goal === 'knowledge' && role === 'citizen') {
+    phase = "Phase 04 – Deep Space: Retrieval Agents"; phaseDetail = "1,5–2 h · RAG & Knowledge Design"; phaseIcon = "🧠";
+    desc = "Du willst Agents, die auf echte Unternehmensdaten zugreifen — SharePoint, M365, strukturierte Quellen. Phase 04 erklärt das RAG-Prinzip (Search → Retrieve → Summarize), Knowledge Design und wie du mit Prompt Basics die Antwortqualität steuerst.";
+    pills = [{ label: "Phase 02 – Low Orbit" }, { label: "Phase 03 – Deep Space" }, { label: "Phase 04 – Retrieval Agents", start: true }];
+
+  } else if (hurdle === 'reliability') {
+    phase = "Phase 04 – Deep Space: Retrieval Agents"; phaseDetail = "1,5–2 h · Stabile, zuverlässige Agents"; phaseIcon = "🧠";
+    desc = "Agents, die halluzinieren oder ungenaue Antworten liefern? Phase 04 ist deine Antwort. Du lernst, wie RAG-Prinzipien, sauberes Knowledge Design und gezielte Prompt Basics dafür sorgen, dass dein Agent stabile, quellenbasierte Antworten gibt.";
+    pills = [{ label: "Phase 03 – Deep Space" }, { label: "Phase 04 – Retrieval Agents", start: true }, { label: "Phase 05 – Task Agents" }];
+
+  } else if (role === 'maker' && goal === 'automate' && studioExp >= 2 && tools >= 2) {
+    phase = "Phase 05 – Deep Space: Task Agents"; phaseDetail = "2–2,5 h · Prozessautomatisierung mit Agents"; phaseIcon = "⚙️";
+    desc = "Du hast die Basis — jetzt geht's an echte Automatisierung. Phase 05 zeigt, wie Agents über Connectoren, APIs und Power Automate Flows reale Geschäftsprozesse steuern. Deterministic vs. AI Orchestration, und ein konkretes Praxisbeispiel (z.B. IT Ticketing).";
+    pills = [{ label: "Phase 03 – Deep Space" }, { label: "Phase 04 – Retrieval Agents" }, { label: "Phase 05 – Task Agents", start: true }, { label: "Phase 06 – Autonomous Agents" }];
+
+  } else if (role === 'maker' && (hurdle === 'scale' || goal === 'automate') && studioExp >= 3) {
+    phase = "Phase 06 – Deep Space: Autonomous Agents"; phaseDetail = "2–3 h · Event-getriebene Automatisierung"; phaseIcon = "🤖";
+    desc = "Du willst Agents, die selbst aktiv werden — ohne dass jemand einen Chat öffnet. Phase 06 taucht in event-getriebene, autonome Agents ein: Trigger via Mail, SharePoint oder Dataverse, Conversational vs. Autonomous Agents, und der Autonomy Dial (Level 1–5).";
+    pills = [{ label: "Phase 05 – Task Agents" }, { label: "Phase 06 – Autonomous Agents", start: true }, { label: "Phase 07 – Mars Surface" }];
+
+  } else if (role === 'maker' && tools <= 1) {
+    phase = "Phase 03 – Deep Space"; phaseDetail = "2–2,5 h · Agent-Architektur verstehen"; phaseIcon = "🛸";
+    desc = "Bevor du komplexe Agents baust, braucht es ein solides technisches Fundament. Phase 03 erklärt Agent-Architektur (Topics, Knowledge, Tools, Orchestrator), den Unterschied zwischen Generative und klassischer Orchestration, und Power Platform Basics für Task Agents.";
+    pills = [{ label: "Phase 02 – Low Orbit" }, { label: "Phase 03 – Deep Space", start: true }, { label: "Phase 04 – Retrieval Agents" }, { label: "Phase 05 – Task Agents" }];
+
+  } else if (role === 'maker') {
+    phase = "Phase 03 – Deep Space"; phaseDetail = "2–2,5 h · Agent-Architektur & Power Platform"; phaseIcon = "🛸";
+    desc = "Phase 03 legt das technische Fundament: Wie sind Copilot Agents wirklich aufgebaut? Was ist der Unterschied zwischen Generative und klassischer Orchestration? Wie nutze ich Connectoren, APIs und Flows? Nach dieser Session bist du bereit für Task und Autonomous Agents.";
+    pills = [{ label: "Phase 03 – Deep Space", start: true }, { label: "Phase 04 – Retrieval Agents" }, { label: "Phase 05 – Task Agents" }];
+
+  } else {
+    phase = "Phase 01 – Moon Base"; phaseDetail = "60–90 min · Dein Start ins Programm"; phaseIcon = "🌙";
+    desc = "Phase 01 ist der ideale Einstieg — egal wo du stehst. Du bekommst ein klares Bild davon, was Copilot Agents sind, welche Möglichkeiten es gibt, und was du beim Thema Governance und Kosten wissen musst.";
+    pills = [{ label: "Phase 01 – Moon Base", start: true }, { label: "Phase 02 – Low Orbit" }];
+  }
+
+  document.getElementById('res-icon').textContent = phaseIcon;
+  document.getElementById('res-headline').textContent = "Dein Kurs ist gesetzt.";
+  document.getElementById('res-sub').textContent = "Hier ist deine persönliche Empfehlung für das Learning Journey.";
+  document.getElementById('res-phase').textContent = phase;
+  document.getElementById('res-phase-detail').textContent = phaseDetail;
+  document.getElementById('res-role').textContent = roleInfo.icon + " " + roleInfo.label;
+  document.getElementById('res-role-detail').textContent = roleInfo.detail;
+  document.getElementById('res-desc').textContent = desc;
+
+  const pillsEl = document.getElementById('res-pills');
+  pillsEl.innerHTML = '';
+  pills.forEach(p => {
+    const el = document.createElement('span');
+    el.className = 'phase-pill' + (p.start ? ' start' : '');
+    el.textContent = p.start ? '▶ ' + p.label : p.label;
+    pillsEl.appendChild(el);
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restart() {
+  current = 0; answers = []; selected = null;
+  document.getElementById('result-view').style.display = 'none';
+  document.getElementById('quiz-view').style.display = 'block';
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
