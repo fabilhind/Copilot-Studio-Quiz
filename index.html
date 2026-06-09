@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mission to Mars – Copilot Agent Quiz</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --navy:    #0F2546;
+  --blue:    #1A3C6B;
+  --mid:     #2563EB;
+  --accent:  #3B82F6;
+  --glow:    #60A5FA;
+  --star:    #F8FAFC;
+  --card-bg: rgba(255,255,255,0.06);
+  --card-border: rgba(255,255,255,0.12);
+  --selected-bg: rgba(59,130,246,0.18);
+  --selected-border: #3B82F6;
+  --text-primary: #F8FAFC;
+  --text-secondary: rgba(248,250,252,0.65);
+  --text-muted: rgba(248,250,252,0.4);
+  --result-bg: #0D1F3C;
+}
+
+html, body {
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--navy);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* ── STARFIELD ── */
+#stars {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+}
+.star {
+  position: absolute; border-radius: 50%;
+  background: white; animation: twinkle var(--d) ease-in-out infinite;
+}
+@keyframes twinkle {
+  0%,100% { opacity: var(--min); transform: scale(1); }
+  50%      { opacity: var(--max); transform: scale(1.4); }
+}
+
+/* ── LAYOUT ── */
+#app {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 2rem 1rem;
+}
+
+/* ── SCREENS ── */
+.screen { display: none; width: 100%; max-width: 620px; animation: fadeUp 0.4s ease; }
+.screen.active { display: flex; flex-direction: column; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── START SCREEN ── */
+#screen-start { align-items: center; text-align: center; gap: 0; }
+
+.start-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 16px; border-radius: 99px;
+  border: 1px solid rgba(59,130,246,0.4);
+  background: rgba(59,130,246,0.1);
+  font-size: 12px; font-weight: 500; color: var(--glow);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+.start-badge::before { content: '●'; font-size: 8px; color: var(--glow); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.start-rocket {
+  font-size: 72px; margin-bottom: 1.5rem;
+  animation: float 4s ease-in-out infinite;
+  display: block; filter: drop-shadow(0 0 24px rgba(96,165,250,0.5));
+}
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+.start-title {
+  font-size: clamp(28px, 6vw, 42px);
+  font-weight: 700; line-height: 1.15;
+  background: linear-gradient(135deg, #F8FAFC 0%, var(--glow) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 0.75rem;
+}
+
+.start-sub {
+  font-size: 16px; color: var(--text-secondary);
+  line-height: 1.6; max-width: 420px; margin: 0 auto 0.75rem;
+}
+
+.start-meta {
+  display: flex; align-items: center; justify-content: center; gap: 1.5rem;
+  margin: 1.5rem 0 2.5rem;
+}
+.meta-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--text-muted);
+}
+.meta-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--text-muted); }
+
+.btn-start {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 15px 36px; border-radius: 12px;
+  background: linear-gradient(135deg, var(--mid), var(--accent));
+  color: #fff; font-size: 16px; font-weight: 600;
+  border: none; cursor: pointer; font-family: inherit;
+  box-shadow: 0 0 32px rgba(59,130,246,0.35), 0 4px 16px rgba(0,0,0,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
+}
+.btn-start:hover { transform: translateY(-2px); box-shadow: 0 0 48px rgba(59,130,246,0.5), 0 8px 24px rgba(0,0,0,0.3); }
+.btn-start:active { transform: translateY(0); }
+
+/* ── QUESTION SCREEN ── */
+#screen-quiz { gap: 0; }
+
+.quiz-header { margin-bottom: 2rem; }
+
+.progress-track {
+  height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px;
+  overflow: hidden; margin-bottom: 1rem;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--mid), var(--glow));
+  border-radius: 2px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+.quiz-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+.step-label { font-size: 12px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.step-dots { display: flex; gap: 6px; }
+.step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); transition: all 0.3s;
+}
+.step-dot.done { background: var(--glow); }
+.step-dot.current { background: var(--accent); width: 18px; border-radius: 3px; }
+
+.question-text {
+  font-size: clamp(18px, 4vw, 23px);
+  font-weight: 600; line-height: 1.4;
+  color: var(--text-primary); margin-bottom: 0.5rem;
+}
+.question-sub {
+  font-size: 13.5px; color: var(--text-secondary); line-height: 1.55;
+  margin-bottom: 1.75rem; min-height: 20px;
+}
+
+.options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 2rem; }
+
+.option-btn {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 16px 18px; border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  cursor: pointer; text-align: left;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+  width: 100%; font-family: inherit;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.option-btn:hover {
+  border-color: rgba(59,130,246,0.5);
+  background: rgba(59,130,246,0.08);
+  transform: translateX(3px);
+}
+.option-btn.selected {
+  border-color: var(--selected-border);
+  border-width: 1.5px;
+  background: var(--selected-bg);
+  box-shadow: 0 0 20px rgba(59,130,246,0.15);
+  transform: translateX(3px);
+}
+.option-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; line-height: 1; }
+.option-label { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
+.option-desc  { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
+.option-check {
+  margin-left: auto; flex-shrink: 0; margin-top: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-size: 11px;
+}
+.option-btn.selected .option-check {
+  background: var(--accent); border-color: var(--accent); color: white;
+}
+
+.nav-row { display: flex; justify-content: flex-end; }
+
+.btn-next {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--mid), var(--accent));
+  color: #fff; font-size: 14px; font-weight: 600;
+  border: none; cursor: pointer; font-family: inherit;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.35);
+  transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.btn-next:disabled { opacity: 0.25; cursor: default; box-shadow: none; pointer-events: none; }
+.btn-next:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.5); }
+
+/* ── RESULT SCREEN ── */
+#screen-result { gap: 0; }
+
+.result-hero {
+  text-align: center;
+  padding: 2rem 1.5rem 1.5rem;
+  background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(96,165,250,0.08));
+  border: 1px solid rgba(59,130,246,0.2);
+  border-radius: 16px; margin-bottom: 1.25rem;
+  position: relative; overflow: hidden;
+}
+.result-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% -20%, rgba(59,130,246,0.2) 0%, transparent 70%);
+}
+.result-icon { font-size: 52px; display: block; margin-bottom: 0.75rem; position: relative; }
+.result-headline {
+  font-size: clamp(18px, 4vw, 22px);
+  font-weight: 700; color: var(--text-primary);
+  margin-bottom: 0.25rem; position: relative;
+}
+.result-sub { font-size: 13.5px; color: var(--text-secondary); position: relative; }
+
+.result-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem;
+}
+.result-card {
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 12px; padding: 1rem 1.1rem;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+.result-card-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px;
+}
+.result-card-value { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.4; }
+.result-card-detail { font-size: 11.5px; color: var(--text-secondary); margin-top: 4px; }
+
+.phases-label { font-size: 11px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.phase-pills { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 1.25rem; }
+.phase-pill {
+  font-size: 12px; padding: 5px 12px; border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-secondary); background: rgba(255,255,255,0.04);
+  font-weight: 500;
+}
+.phase-pill.start {
+  background: rgba(37,99,235,0.25); color: var(--glow);
+  border-color: rgba(59,130,246,0.4); font-weight: 600;
+}
+
+.result-desc {
+  font-size: 13.5px; color: var(--text-secondary); line-height: 1.65;
+  padding: 1rem 1.25rem;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 12px; margin-bottom: 1.25rem;
+}
+
+.result-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.btn-restart {
+  width: 100%; padding: 12px;
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+  background: transparent; font-size: 13px; color: var(--text-secondary);
+  cursor: pointer; font-family: inherit; font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-restart:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 480px) {
+  #app { padding: 1.25rem 0.875rem; justify-content: flex-start; padding-top: 1.5rem; }
+  .result-cards { grid-template-columns: 1fr; }
+  .start-meta { gap: 1rem; flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<div id="stars"></div>
+
+<div id="app">
+  <!-- START -->
+  <div id="screen-start" class="screen active">
+    <div class="start-badge">Mission to Mars · Copilot Agent Quiz</div>
+    <span class="start-rocket">🚀</span>
+    <h1 class="start-title">Wo stehst du auf<br>dem Weg zum Mars?</h1>
+    <p class="start-sub">5 Fragen. Deine persönliche Empfehlung für den Einstieg in Copilot Agents &amp; Copilot Studio.</p>
+    <div class="start-meta">
+      <div class="meta-item">⏱ ca. 2 Minuten</div>
+      <div class="meta-dot"></div>
+      <div class="meta-item">5 Fragen</div>
+      <div class="meta-dot"></div>
+      <div class="meta-item">Kein Login nötig</div>
+    </div>
+    <button class="btn-start" onclick="startQuiz()">Quiz starten <span>→</span></button>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="screen-quiz" class="screen">
+    <div class="quiz-header">
+      <div class="quiz-nav">
+        <span class="step-label" id="step-lbl">Frage 1 von 5</span>
+        <div class="step-dots" id="step-dots"></div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="prog" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="question-text" id="q-text"></div>
+    <div class="question-sub" id="q-sub"></div>
+    <div class="options" id="opts"></div>
+    <div class="nav-row">
+      <button class="btn-next" id="btn-next" disabled onclick="nextStep()">Weiter <span>→</span></button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="screen-result" class="screen">
+    <div class="result-hero">
+      <span class="result-icon" id="res-icon">🌙</span>
+      <div class="result-headline" id="res-headline"></div>
+      <div class="result-sub">Deine persönliche Empfehlung für das Mission to Mars Learning Journey.</div>
+    </div>
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="result-card-label">Empfohlene Phase</div>
+        <div class="result-card-value" id="res-phase"></div>
+        <div class="result-card-detail" id="res-phase-detail"></div>
+      </div>
+      <div class="result-card">
+        <div class="result-card-label">Deine Zielgruppe</div>
+        <div class="result-card-value" id="res-role"></div>
+        <div class="result-card-detail" id="res-role-detail"></div>
+      </div>
+    </div>
+    <div class="phases-label">Dein Lernpfad</div>
+    <div class="phase-pills" id="res-pills"></div>
+    <div class="result-desc" id="res-desc"></div>
+    <div class="result-actions">
+      <button class="btn-restart" onclick="restart()">↺ Quiz nochmal starten</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STARFIELD ──────────────────────────────────────────────────────────────
+(function(){
+  const c = document.getElementById('stars');
+  for(let i=0;i<120;i++){
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random()*2+0.5;
+    const min = (Math.random()*0.1+0.05).toFixed(2);
+    const max = (Math.random()*0.6+0.2).toFixed(2);
+    const d   = (Math.random()*5+3).toFixed(1)+'s';
+    s.style.cssText = `
+      width:${sz}px;height:${sz}px;
+      top:${Math.random()*100}%;left:${Math.random()*100}%;
+      --d:${d};--min:${min};--max:${max};
+      animation-delay:${(Math.random()*6).toFixed(1)}s;
+    `;
+    c.appendChild(s);
+  }
+})();
+
+// ── DATA ──────────────────────────────────────────────────────────────────
+const questions = [
+  {
+    text: "Hast du schon einmal Copilot Studio geöffnet?",
+    sub: "Copilot Studio ist das Microsoft-Tool, mit dem du Copilot Agents baust — direkt im Browser, kein Code nötig.",
+    options: [
+      { icon:"🆕", label:"Nein, noch nie gehört",        desc:"Copilot Studio ist mir komplett neu.", val:0 },
+      { icon:"👀", label:"Ich habe reingeschaut",         desc:"Geöffnet, aber noch nichts gebaut.", val:1 },
+      { icon:"🤖", label:"Ich habe einen Agent erstellt", desc:"Mindestens einen Agenten selbst gebaut.", val:2 },
+      { icon:"🛠️", label:"Ich nutze es regelmäßig",      desc:"Ich baue und betreibe Agents aktiv.", val:3 },
+    ]
+  },
+  {
+    text: "Was beschreibt deine Rolle bei Copilot Agents am besten?",
+    sub: "Wähle die Rolle, die am stärksten zu dir passt — auch wenn du mehrere berührst.",
+    options: [
+      { icon:"👤", label:"Ich nutze Agents",               desc:"Ich interagiere mit Agenten, die andere gebaut haben.", val:"user" },
+      { icon:"🏢", label:"Ich verantworte Agents",         desc:"Freigabe, Betrieb oder Governance von Agenten.", val:"owner" },
+      { icon:"🧩", label:"Ich baue Agents (No-Code)",      desc:"Ich erstelle Agenten selbst, ohne Programmierkenntnisse.", val:"citizen" },
+      { icon:"⚙️", label:"Ich entwickle Agents technisch", desc:"Power Platform, APIs, Flows oder Dataverse.", val:"maker" },
+    ]
+  },
+  {
+    text: "Was willst du mit Copilot Agents primär erreichen?",
+    sub: "",
+    options: [
+      { icon:"🧭", label:"Verstehen, was Agents sind",        desc:"Wie funktionieren Copilot Agents — und was bedeutet das für mich?", val:"understand" },
+      { icon:"🤖", label:"Meinen ersten Agenten bauen",       desc:"Einen einfachen, nützlichen Agenten selbst erstellen.", val:"firstagent" },
+      { icon:"📚", label:"Agenten mit Wissen verbinden",      desc:"Agents an SharePoint, M365 oder eigene Inhalte anbinden.", val:"knowledge" },
+      { icon:"🔁", label:"Geschäftsprozesse automatisieren",  desc:"Echte Workflows mit Agenten und Power Automate umsetzen.", val:"automate" },
+    ]
+  },
+  {
+    text: "Welche Aussage beschreibt dich am ehesten?",
+    sub: "Wähle das Fortgeschrittenste, womit du schon gearbeitet hast.",
+    options: [
+      { icon:"🌱", label:"Power Platform ist Neuland",     desc:"Power Automate, Dataverse, Connectors — alles neu für mich.", val:0 },
+      { icon:"📋", label:"Ich kenne SharePoint & M365 gut",desc:"Teams, SharePoint, OneDrive — damit arbeite ich täglich.", val:1 },
+      { icon:"🔌", label:"Ich habe Flows oder Topics gebaut",desc:"Power Automate oder Copilot Studio Topics kenne ich bereits.", val:2 },
+      { icon:"🧪", label:"Ich arbeite mit APIs oder Dataverse",desc:"Integrationen, Custom Connectors oder Datenbankverbindungen.", val:3 },
+    ]
+  },
+  {
+    text: "Was ist deine größte Hürde bei Copilot Agents?",
+    sub: "Das hilft uns zu verstehen, worauf deine Session den Fokus legen soll.",
+    options: [
+      { icon:"🔒", label:"Governance & Sicherheit",           desc:"Was ist erlaubt? Wer ist verantwortlich? Wie läuft das sicher?", val:"governance" },
+      { icon:"🤔", label:"Ich weiß nicht, wo ich anfange",    desc:"Die Möglichkeiten sind riesig — mir fehlt der Einstiegspunkt.", val:"start" },
+      { icon:"📉", label:"Agents liefern ungenaue Antworten", desc:"Ich will Agenten zuverlässiger und halluzinationsfreier machen.", val:"reliability" },
+      { icon:"⚡", label:"Skalierung & Automatisierung",       desc:"Einzelne Agents reichen nicht — ich will komplexere Systeme.", val:"scale" },
+    ]
+  }
+];
+
+let current = 0, answers = [], selected = null;
+const TOTAL = questions.length;
+
+// ── QUIZ LOGIC ────────────────────────────────────────────────────────────
+function startQuiz() {
+  showScreen('screen-quiz');
+  render();
+}
+
+function render() {
+  const q = questions[current];
+  document.getElementById('prog').style.width = (current/TOTAL*100)+'%';
+  document.getElementById('step-lbl').textContent = `Frage ${current+1} von ${TOTAL}`;
+
+  // dots
+  const dots = document.getElementById('step-dots');
+  dots.innerHTML = '';
+  for(let i=0;i<TOTAL;i++){
+    const d = document.createElement('div');
+    d.className = 'step-dot' + (i<current?' done':i===current?' current':'');
+    dots.appendChild(d);
+  }
+
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('q-sub').textContent  = q.sub;
+  selected = null;
+  document.getElementById('btn-next').disabled = true;
+
+  const opts = document.getElementById('opts');
+  opts.innerHTML = '';
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `
+      <span class="option-icon">${opt.icon}</span>
+      <div style="flex:1">
+        <div class="option-label">${opt.label}</div>
+        <div class="option-desc">${opt.desc}</div>
+      </div>
+      <div class="option-check">✓</div>
+    `;
+    btn.onclick = () => {
+      document.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selected = opt.val;
+      document.getElementById('btn-next').disabled = false;
+    };
+    opts.appendChild(btn);
+  });
+}
+
+function nextStep() {
+  if(selected===null) return;
+  answers.push(selected);
+  current++;
+  if(current>=TOTAL) showResult();
+  else { render(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+
+// ── RESULT LOGIC ──────────────────────────────────────────────────────────
+function showResult() {
+  const [studioExp, role, goal, tools, hurdle] = answers;
+
+  const roleMap = {
+    user:    { label:"Agent User",        detail:"Du nutzt Agents im Alltag",              icon:"👤" },
+    owner:   { label:"Agent Owner",       detail:"Du verantwortest Agents in deiner Org",  icon:"🏢" },
+    citizen: { label:"Citizen Developer", detail:"Du baust Agents mit No-Code",            icon:"🧩" },
+    maker:   { label:"Maker",             detail:"Du entwickelst Agents technisch",        icon:"⚙️" },
+  };
+  const roleInfo = roleMap[role] || roleMap['user'];
+
+  let phase, phaseDetail, phaseIcon, desc, pills;
+
+  if(role==='owner' || hurdle==='governance' || (role==='user' && goal==='understand')){
+    phase="Phase 01 – Moon Base"; phaseDetail="60–90 min · Info Session"; phaseIcon="🌙";
+    desc="Phase 01 ist dein richtiger Start: Was sind Copilot Agents, wer trägt die Verantwortung, was bedeutet Governance bei LHG — und wie funktionieren Lizenzen und Kosten? Danach hast du ein klares Mindset und weißt, was Agents für dich und dein Team bedeuten.";
+    pills=[{label:"Phase 01 – Moon Base",start:true},{label:"Phase 02 – Low Orbit"}];
+
+  } else if(studioExp<=1 && (goal==='firstagent'||hurdle==='start') && role==='citizen'){
+    phase="Phase 02 – Low Orbit"; phaseDetail="60–90 min · Hands-on Agent Builder"; phaseIcon="🚀";
+    desc="Du bist bereit für deinen ersten Agenten in Copilot Studio! Phase 02 führt dich durch No-Code Agent Builder Grundlagen, Retrieval Agents für FAQ und Wissensmanagement, und einfache Knowledge Integration mit M365 und SharePoint — direkt ausprobieren, kein Code nötig.";
+    pills=[{label:"Phase 01 – Moon Base"},{label:"Phase 02 – Low Orbit",start:true},{label:"Phase 03 – Deep Space"}];
+
+  } else if(goal==='knowledge' && role==='citizen'){
+    phase="Phase 04 – Deep Space: Retrieval Agents"; phaseDetail="1,5–2 h · RAG & Knowledge Design"; phaseIcon="🧠";
+    desc="Du willst Agents, die auf echte Unternehmensdaten zugreifen — SharePoint, M365, strukturierte Quellen. Phase 04 erklärt das RAG-Prinzip (Search → Retrieve → Summarize), sauberes Knowledge Design und wie du mit Prompt Basics die Antwortqualität steuerst. Empfehlung: kurz Phase 02 & 03 anschauen als Basis.";
+    pills=[{label:"Phase 02 – Low Orbit"},{label:"Phase 03 – Deep Space"},{label:"Phase 04 – Retrieval Agents",start:true}];
+
+  } else if(hurdle==='reliability'){
+    phase="Phase 04 – Deep Space: Retrieval Agents"; phaseDetail="1,5–2 h · Stabile Agents ohne Hallucinations"; phaseIcon="🧠";
+    desc="Agents, die halluzinieren oder ungenaue Antworten liefern? Phase 04 ist deine Antwort. RAG-Prinzipien (Search → Retrieve → Summarize), sauberes Knowledge Design und gezielte Prompt Basics sorgen dafür, dass dein Agent stabile, quellenbasierte Antworten gibt.";
+    pills=[{label:"Phase 03 – Deep Space"},{label:"Phase 04 – Retrieval Agents",start:true},{label:"Phase 05 – Task Agents"}];
+
+  } else if(role==='maker' && goal==='automate' && studioExp>=2 && tools>=2){
+    phase="Phase 05 – Deep Space: Task Agents"; phaseDetail="2–2,5 h · Prozessautomatisierung mit Agents"; phaseIcon="⚙️";
+    desc="Du hast die technische Basis — jetzt geht's an echte Automatisierung. Phase 05 zeigt, wie Agents über Connectoren, APIs und Power Automate Flows reale Geschäftsprozesse steuern. Deterministic vs. AI Orchestration, und ein konkretes Praxisbeispiel wie IT Ticketing.";
+    pills=[{label:"Phase 03 – Deep Space"},{label:"Phase 04 – Retrieval Agents"},{label:"Phase 05 – Task Agents",start:true},{label:"Phase 06 – Autonomous Agents"}];
+
+  } else if(role==='maker' && (hurdle==='scale'||goal==='automate') && studioExp>=3){
+    phase="Phase 06 – Deep Space: Autonomous Agents"; phaseDetail="2–3 h · Event-getriebene Automatisierung"; phaseIcon="🤖";
+    desc="Du willst Agents, die selbst aktiv werden — ohne dass jemand einen Chat öffnet. Phase 06 taucht in event-getriebene, autonome Agents ein: Trigger via Mail, SharePoint oder Dataverse, Conversational vs. Autonomous Agents, und der Autonomy Dial (Level 1–5).";
+    pills=[{label:"Phase 05 – Task Agents"},{label:"Phase 06 – Autonomous Agents",start:true},{label:"Phase 07 – Mars Surface"}];
+
+  } else if(role==='maker' && tools<=1){
+    phase="Phase 03 – Deep Space"; phaseDetail="2–2,5 h · Agent-Architektur verstehen"; phaseIcon="🛸";
+    desc="Bevor du komplexe Agents baust, braucht es ein solides technisches Fundament. Phase 03 erklärt Agent-Architektur (Topics, Knowledge, Tools, Orchestrator), den Unterschied zwischen Generative und klassischer Orchestration, und Power Platform Basics für Task Agents.";
+    pills=[{label:"Phase 02 – Low Orbit"},{label:"Phase 03 – Deep Space",start:true},{label:"Phase 04 – Retrieval Agents"},{label:"Phase 05 – Task Agents"}];
+
+  } else if(role==='maker'){
+    phase="Phase 03 – Deep Space"; phaseDetail="2–2,5 h · Agent-Architektur & Power Platform"; phaseIcon="🛸";
+    desc="Phase 03 legt dein technisches Fundament: Wie sind Copilot Agents wirklich aufgebaut? Was ist der Unterschied zwischen Generative und klassischer Orchestration? Wie nutze ich Connectoren, APIs und Flows? Nach dieser Session bist du bereit für Task und Autonomous Agents.";
+    pills=[{label:"Phase 03 – Deep Space",start:true},{label:"Phase 04 – Retrieval Agents"},{label:"Phase 05 – Task Agents"}];
+
+  } else {
+    phase="Phase 01 – Moon Base"; phaseDetail="60–90 min · Dein Start ins Programm"; phaseIcon="🌙";
+    desc="Phase 01 ist der ideale Einstieg — egal wo du stehst. Du bekommst ein klares Bild davon, was Copilot Agents sind, welche Möglichkeiten es gibt, und was du beim Thema Governance und Kosten wissen musst. Danach weißt du genau, welche Phase als nächstes für dich passt.";
+    pills=[{label:"Phase 01 – Moon Base",start:true},{label:"Phase 02 – Low Orbit"}];
+  }
+
+  document.getElementById('res-icon').textContent      = phaseIcon;
+  document.getElementById('res-headline').textContent  = "Dein Kurs ist gesetzt, " + roleInfo.icon + " " + roleInfo.label + ".";
+  document.getElementById('res-phase').textContent     = phase;
+  document.getElementById('res-phase-detail').textContent = phaseDetail;
+  document.getElementById('res-role').textContent      = roleInfo.icon + "  " + roleInfo.label;
+  document.getElementById('res-role-detail').textContent = roleInfo.detail;
+  document.getElementById('res-desc').textContent      = desc;
+
+  const pillsEl = document.getElementById('res-pills');
+  pillsEl.innerHTML = '';
+  pills.forEach(p=>{
+    const el = document.createElement('span');
+    el.className = 'phase-pill'+(p.start?' start':'');
+    el.textContent = p.start ? '▶ '+p.label : p.label;
+    pillsEl.appendChild(el);
+  });
+
+  showScreen('screen-result');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function restart(){
+  current=0; answers=[]; selected=null;
+  showScreen('screen-start');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+</script>
+</body>
+</html>
